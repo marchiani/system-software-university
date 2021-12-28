@@ -25,13 +25,15 @@ namespace SystemSoftwareUniversityTests
             using var reader = new BinaryReader(file);
             _loremBytes = reader.ReadBytes(Convert.ToInt32(file.Length));
             _fileSystemProvider = new FileSystemProvider();
-            _fs = _fileSystemProvider.CreateNewFileSystem(FsName, 100);
+            _fs = _fileSystemProvider.CreateNewFileSystem(FsName, 300);
         }
 
         [Theory]
         [InlineData(0)]
         [InlineData(512)]
         [InlineData(2000)]
+        [InlineData(4200)]
+        [InlineData(123)]
         [InlineData(756)]
         [InlineData(1234)]
         [InlineData(6723)]
@@ -40,6 +42,8 @@ namespace SystemSoftwareUniversityTests
         [InlineData(529)]
         [InlineData(4318)]
         [InlineData(4406)]
+        [InlineData(2832)]
+        [InlineData(3279)]
         public void WithOffsetInDescriptorAndMap(int offset)
         {
             _fs.CreateFile($"test{offset}");
@@ -52,8 +56,8 @@ namespace SystemSoftwareUniversityTests
             fd = _fs.OpenFile($"test{offset}");
             var res = _fs.ReadFile(fd, offset, Convert.ToUInt16(_loremBytes.Length - offset));
             _fs.CloseFile(fd);
-            var text1 = Encoding.Default.GetString(dataToWrite);
-            var text2 = Encoding.Default.GetString(res);
+            var text1 = System.Text.Encoding.Default.GetString(dataToWrite);
+            var text2 = System.Text.Encoding.Default.GetString(res);
 
             Assert.True(dataToWrite.SequenceEqual(res));
         }
@@ -64,6 +68,9 @@ namespace SystemSoftwareUniversityTests
         [InlineData(5)]
         [InlineData(7)]
         [InlineData(10)]
+        //[InlineData(60)]
+        //[InlineData(150)]
+        //[InlineData(200)]
         public void MultipleFiles(int filesCount)
         {
             var random = new Random();
@@ -98,14 +105,17 @@ namespace SystemSoftwareUniversityTests
                 return result;
             });
 
-            if (!result.All(r => r is true)) Console.WriteLine();
+            if (!result.All(r => r is true))
+            {
+                Console.WriteLine();
+            }
 
             Assert.True(result.All(r => r is true));
         }
 
         [Theory]
         [InlineData(597, 913)]
-        public void TestLink(int offset, ushort value)
+        public void Link(int offset, ushort value)
         {
             var file = _loremBytes.Skip(offset).Take(value).ToArray();
             _fs.CreateFile("test");
@@ -116,14 +126,30 @@ namespace SystemSoftwareUniversityTests
             _fs.LinkFile("test", "testLink");
             fd = _fs.OpenFile("testLink");
             var res = _fs.ReadFile(fd, offset, Convert.ToUInt16(file.Length));
-            var fileText = Encoding.Default.GetString(file);
-            var resText = Encoding.Default.GetString(res);
+            var fileText = System.Text.Encoding.Default.GetString(file);
+            var resText = System.Text.Encoding.Default.GetString(res);
             Assert.True(res.SequenceEqual(file));
         }
 
         [Theory]
         [InlineData(597, 913)]
-        public void TestMount(int offset, ushort value)
+        public void Unlink(int offset, ushort value)
+        {
+            var file = _loremBytes.Skip(offset).Take(value).ToArray();
+            _fs.CreateFile("test");
+            _fs.Truncate("test", Convert.ToUInt16(offset + value));
+            var fd = _fs.OpenFile("test");
+            _fs.WriteToFile(file, fd, offset, Convert.ToUInt16(file.Length));
+            _fs.CloseFile(fd);
+            _fs.LinkFile("test", "testLink");
+            _fs.UnlinkFile("/testLink");
+            var ls = _fs.DirectoryList();
+            Assert.True(!ls.Any(de => de.Name == "testLink" && de.IsValid));
+        }
+
+        [Theory]
+        [InlineData(597, 913)]
+        public void Mount(int offset, ushort value)
         {
             var file = _loremBytes.Skip(offset).Take(value).ToArray();
             _fs.CreateFile("test");
@@ -135,13 +161,13 @@ namespace SystemSoftwareUniversityTests
             var fs = _fileSystemProvider.MountExistingFileSystem(FsName);
             fd = fs.OpenFile("test");
             var res = fs.ReadFile(fd, offset, Convert.ToUInt16(file.Length));
-            var fileText = Encoding.Default.GetString(file);
-            var resText = Encoding.Default.GetString(res);
+            var fileText = System.Text.Encoding.Default.GetString(file);
+            var resText = System.Text.Encoding.Default.GetString(res);
             Assert.True(res.SequenceEqual(file));
         }
 
         [Fact]
-        public void FStatTest()
+        public void FStat()
         {
             var offset = 597;
             ushort value = 913;
@@ -162,32 +188,83 @@ namespace SystemSoftwareUniversityTests
         }
 
         [Fact]
-        public void LsTest()
+        public void Ls()
         {
             _fs.CreateFile("file1");
             _fs.CreateFile("file2");
             var ls = _fs.DirectoryList();
-            Assert.True(ls[0].Name == "file1" &&
-                        ls[0].IsValid &&
-                        ls[1].Name == "file2" &&
-                        ls[1].IsValid);
+            Assert.True(ls[1].Name == "file1" &&
+                        ls[1].IsValid &&
+                        ls[2].Name == "file2" &&
+                        ls[2].IsValid);
         }
 
-        // for debug
         [Fact]
-        public void Testing()
+        public void TruncateReduceSize()
         {
-            var offset = 597;
-            ushort value = 913;
-            var file = _loremBytes.Skip(offset).Take(value).ToArray();
-            var fileText = Encoding.Default.GetString(file);
+            _fs.CreateFile("file");
+            _fs.Truncate("file", 9876);
+            _fs.Truncate("file", 6543);
+            var descriptor = _fs.GetFileDescriptor(1);
+            Assert.True(descriptor.FileSize == 6543);
+        }
+
+        [Fact]
+        public void LookUp()
+        {
             _fs.CreateFile("test");
-            _fs.Truncate("test", Convert.ToUInt16(offset + value));
+            var descriptor = _fs.LookUp("test");
+            Assert.True(descriptor.Id == 1);
+        }
+
+        [Fact]
+        public void CreateSymlink()
+        {
+            _fs.CreateFile("test");
+            _fs.Truncate("test", 100);
             var fd = _fs.OpenFile("test");
-            _fs.WriteToFile(file, fd, offset, Convert.ToUInt16(file.Length));
-            var res = _fs.ReadFile(fd, offset, Convert.ToUInt16(file.Length));
-            var resText = Encoding.Default.GetString(res);
-            Assert.True(res.SequenceEqual(file));
+            _fs.WriteToFile(_loremBytes.Take(100).ToArray(), fd, 0, 100);
+            _fs.CloseFile(fd);
+            _fs.CreateSymlink("symlink", "test");
+            var descriptor = _fs.LookUp("/symlink");
+            fd = _fs.OpenFile("/symlink");
+            var bytes = _fs.ReadFile(fd, 0, 100);
+            Assert.True(_loremBytes.Take(100).SequenceEqual(bytes));
+        }
+
+        [Fact]
+        public void MkDir()
+        {
+            _fs.MakeDirectory("test");
+            var currentDir = _fs.LookUp("/test");
+            _fs.MakeDirectory("inner_test", currentDir.Id);
+            currentDir = _fs.LookUp("inner_test", currentDir.Id);
+            _fs.CreateFile("testfile", currentDir.Id);
+            _fs.Truncate("./testfile", 100, currentDir.Id);
+            var fd = _fs.OpenFile("./testfile", currentDir.Id);
+            _fs.WriteToFile(_loremBytes.Take(100).ToArray(), fd, 0, 100);
+            var res = _fs.ReadFile(fd, 0, 100);
+            Assert.True(res.SequenceEqual(_loremBytes.Take(100)));
+        }
+
+        [Fact]
+        public void RmDir()
+        {
+            _fs.MakeDirectory("test");
+            _fs.RemoveDirectory("test");
+            var ls = _fs.DirectoryList();
+            Assert.DoesNotContain(ls, de => de.Name == "test" && de.IsValid);
+        }
+
+        [Fact]
+        public void MkDirReference()
+        {
+            _fs.MakeDirectory("dir");
+            _fs.CreateFile("/dir/file1");
+            _fs.CreateSymlink("/dir/file2", "/dir/file1");
+            _fs.UnlinkFile("/dir/file2");
+            var descriptor = _fs.GetFileDescriptor(3);
+            Assert.True(descriptor.References == 1);
         }
     }
 }

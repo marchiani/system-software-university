@@ -6,7 +6,7 @@ using SystemSoftwareUniversity.Domain.Models;
 namespace SystemSoftwareUniversity
 {
     public interface IFileSystemCustom : IDisposable
-        {
+    {
         Block GetBlock(int index);
 
         void SetBlock(int index, Block block);
@@ -27,22 +27,33 @@ namespace SystemSoftwareUniversity
 
         void UnsetBitFree(int index);
 
-        void CreateFile(string filename);
+        void CreateFile(string filename, ushort cwd = 0);
 
         void WriteToFile(byte[] file, int fd, int offset, ushort size);
 
-        List<DirectoryEntry> DirectoryList();
+        List<DirectoryEntry> DirectoryList(ushort directoryDescriptorId = 0);
 
         byte[] ReadFile(int fd, int offset, ushort size);
 
-        void UnlinkFile(string filename);
+        void UnlinkFile(string filename, ushort cwd = 0);
 
-        void LinkFile(string existingFileName, string linkName);
+        void LinkFile(string existingFileName, string linkName, ushort cwd = 0);
 
-        FileDescriptor Truncate(string filename, ushort size);
+        FileDescriptor Truncate(string filename, ushort size, ushort cwd = 0);
 
-        int OpenFile(string filename);
+        int OpenFile(string filename, ushort cwd = 0);
 
         void CloseFile(int fd);
-        }
+
+        void MakeDirectory(string directoryName, ushort cwd = 0);
+
+        void RemoveDirectory(string directoryName, ushort cwd = 0);
+
+        void CreateSymlink(string path, string payload, ushort cwd = 0);
+
+        FileDescriptor LookUp(string path,
+            ushort cwd = 0,
+            bool resolveSymlink = true,
+            int symlinkMaxCount = FileSystemSettings.MaxSymlinkInOneLookup);
+    }
 }
