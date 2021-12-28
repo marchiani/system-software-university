@@ -1,0 +1,26 @@
+{
+  "Version": 1,
+  "ProjectMap": {
+    "014a4cf2-158a-4dae-9dc6-e28ade81913d": {
+      "ProjectGuid": "014a4cf2-158a-4dae-9dc6-e28ade81913d",
+      "DisplayName": "SystemSoftwareUniversity",
+      "ColorIndex": 0
+    },
+    "ba5a9d17-0a00-4788-8207-af2cbcd035f6": {
+      "ProjectGuid": "ba5a9d17-0a00-4788-8207-af2cbcd035f6",
+      "DisplayName": "SystemSoftwareUniversity.Domain",
+      "ColorIndex": 1
+    },
+    "a2fe74e1-b743-11d0-ae1a-00a0c90fffc3": {
+      "ProjectGuid": "a2fe74e1-b743-11d0-ae1a-00a0c90fffc3",
+      "DisplayName": "Miscellaneous Files",
+      "ColorIndex": -1
+    },
+    "dc52ae04-71a7-46bc-afec-caa0d773a0b3": {
+      "ProjectGuid": "dc52ae04-71a7-46bc-afec-caa0d773a0b3",
+      "DisplayName": "SystemSoftwareUniversityTests",
+      "ColorIndex": 2
+    }
+  },
+  "NextColorIndex": 3
+}
